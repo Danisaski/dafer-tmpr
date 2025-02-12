@@ -1,0 +1,4 @@
+<DnaLibrary Name="CoolPropExcel">
+    <ExternalLibrary Path="CoolPropExcel.dll" LoadFromBytes="true"/>
+</DnaLibrary>
+
