@@ -14,41 +14,75 @@ public static class CoolPropWrapper
 
     // Function to calculate thermodynamic properties
     [ExcelFunction(Description = "Calculate thermodynamic properties of real fluids using CoolProp with engineering units.")]
-    public static double TMPr(string output, string name1, double value1, string name2, double value2, string fluid)
+    public static object TMPr(string output, string name1, object value1, string name2, object value2, string fluid)
     {
+        // Check for missing or invalid inputs
+        if (string.IsNullOrWhiteSpace(output)) return "Error: Output parameter is missing.";
+        if (string.IsNullOrWhiteSpace(name1)) return "Error: First property name is missing.";
+        if (value1 == null || !(value1 is double)) return "Error: First property value is missing or not a number.";
+        if (string.IsNullOrWhiteSpace(name2)) return "Error: Second property name is missing.";
+        if (value2 == null || !(value2 is double)) return "Error: Second property value is missing or not a number.";
+        if (string.IsNullOrWhiteSpace(fluid)) return "Error: Fluid name is missing.";
+        
+        // Normalize parameter names
+        name1 = FormatName(name1);
+        name2 = FormatName(name2);
+        output = FormatName(output);
+        
         // Convert inputs to SI units
-        name1 = FormatName(name1); // Normalize name capitalization
-        name2 = FormatName(name2); // Normalize name capitalization
-        output = FormatName(output); // Normalize output name capitalization
-
-        value1 = ConvertToSI(name1, value1);
-        value2 = ConvertToSI(name2, value2);
-
+        double val1SI = ConvertToSI(name1, (double)value1);
+        double val2SI = ConvertToSI(name2, (double)value2);
+        
         // Call CoolProp for the requested property
-        double result = PropsSI(output, name1, value1, name2, value2, fluid);
-
-        // Convert outputs to engineering units
+        double result;
+        try
+        {
+            result = PropsSI(output, name1, val1SI, name2, val2SI, fluid);
+        }
+        catch (Exception ex)
+        {
+            return $"Error: Failed to compute property. {ex.Message}";
+        }
+        
+        // Convert output to engineering units
         return ConvertFromSI(output, result);
     }
 
-    // Function to calculate thermodynamic properties
     [ExcelFunction(Description = "Calculate thermodynamic properties of humid air using CoolProp with engineering units.")]
-    public static double TMPa(string output, string name1, double value1, string name2, double value2, string name3, double value3)
+    public static object TMPa(string output, string name1, object value1, string name2, object value2, string name3, object value3)
     {
+        // Check for missing or invalid inputs
+        if (string.IsNullOrWhiteSpace(output)) return "Error: Output parameter is missing.";
+        if (string.IsNullOrWhiteSpace(name1)) return "Error: First property name is missing.";
+        if (value1 == null || !(value1 is double)) return "Error: First property value is missing or not a number.";
+        if (string.IsNullOrWhiteSpace(name2)) return "Error: Second property name is missing.";
+        if (value2 == null || !(value2 is double)) return "Error: Second property value is missing or not a number.";
+        if (string.IsNullOrWhiteSpace(name3)) return "Error: Third property name is missing.";
+        if (value3 == null || !(value3 is double)) return "Error: Third property value is missing or not a number.";
+        
+        // Normalize parameter names
+        name1 = FormatName_HA(name1);
+        name2 = FormatName_HA(name2);
+        name3 = FormatName_HA(name3);
+        output = FormatName_HA(output);
+        
         // Convert inputs to SI units
-        name1 = FormatName_HA(name1); // Normalize name capitalization
-        name2 = FormatName_HA(name2); // Normalize name capitalization
-        name3 = FormatName_HA(name3); // Normalize name capitalization
-        output = FormatName_HA(output); // Normalize output name capitalization
-
-        value1 = ConvertToSI_HA(name1, value1);
-        value2 = ConvertToSI_HA(name2, value2);
-        value3 = ConvertToSI_HA(name3, value3);
-
+        double val1SI = ConvertToSI_HA(name1, (double)value1);
+        double val2SI = ConvertToSI_HA(name2, (double)value2);
+        double val3SI = ConvertToSI_HA(name3, (double)value3);
+        
         // Call CoolProp for the requested property
-        double result = HAPropsSI(output, name1, value1, name2, value2, name3, value3);
-
-        // Convert outputs to engineering units
+        double result;
+        try
+        {
+            result = HAPropsSI(output, name1, val1SI, name2, val2SI, name3, val3SI);
+        }
+        catch (Exception ex)
+        {
+            return $"Error: Failed to compute property. {ex.Message}";
+        }
+        
+        // Convert output to engineering units
         return ConvertFromSI_HA(output, result);
     }
 
@@ -186,26 +220,9 @@ public static class CoolPropWrapper
             case "H": // Specific Enthalpy (kJ/kg to J/kg)
             case "U": // Specific Internal Energy (kJ/kg to J/kg)
             case "S": // Specific Entropy (kJ/kg to J/kg)
-            case "Cvmass": // Mass specific heat at constant volume (kJ/kg/K to J/kg/K)
-                return value * 1000;
-            case "Dmolar": // Molar density (mol/m^3 to mol/m^3) - no conversion needed
-                return value;
-            case "D": // Mass density (kg/m^3 to kg/m^3) - no conversion needed
-            case "Rho":
-            case "Dmass":
-                return value;
-            case "Q": // Mass vapor quality (mol/mol to mol/mol) - no conversion needed
-                return value;
-            case "Tau": // Reciprocal reduced temperature (Tc/T) - no conversion needed
-                return value;
-            case "Umolar": // Molar specific internal energy (J/mol to J/mol) - no conversion needed
-                return value;
-            case "Smolar": // Molar specific entropy (J/mol/K to J/mol/K) - no conversion needed
-                return value;
-            case "Cpmolar": // Molar specific heat at constant pressure (J/mol/K to J/mol/K) - no conversion needed
-                return value;
             case "Cp": // Mass specific heat at constant pressure (kJ/kg/K to J/kg/K)
             case "Cpmass":
+            case "Cvmass": // Mass specific heat at constant volume (kJ/kg/K to J/kg/K)
                 return value * 1000;
             default:
                 return value; // No conversion if unit not found
@@ -224,26 +241,9 @@ public static class CoolPropWrapper
             case "H": // Specific Enthalpy (J/kg to kJ/kg)
             case "U": // Specific Internal Energy (J/kg to kJ/kg)
             case "S": // Specific Entropy (J/kg to kJ/kg)
-            case "Cvmass": // Mass specific heat at constant volume (J/kg/K to kJ/kg/K)
-                return value / 1000;
-            case "Dmolar": // Molar density (mol/m^3 to mol/m^3) - no conversion needed
-                return value;
-            case "D": // Mass density (kg/m^3 to kg/m^3) - no conversion needed
-            case "Rho":
-            case "Dmass":
-                return value;
-            case "Q": // Mass vapor quality (mol/mol to mol/mol) - no conversion needed
-                return value;
-            case "Tau": // Reciprocal reduced temperature (Tc/T) - no conversion needed
-                return value;
-            case "Umolar": // Molar specific internal energy (J/mol to J/mol) - no conversion needed
-                return value;
-            case "Smolar": // Molar specific entropy (J/mol/K to J/mol/K) - no conversion needed
-                return value;
-            case "Cpmolar": // Molar specific heat at constant pressure (J/mol/K to J/mol/K) - no conversion needed
-                return value;
             case "Cp": // Mass specific heat at constant pressure (J/kg/K to kJ/kg/K)
             case "Cpmass":
+            case "Cvmass": // Mass specific heat at constant volume (J/kg/K to kJ/kg/K)
                 return value / 1000;
             default:
                 return value; // No conversion if unit not found
@@ -325,47 +325,19 @@ public static class CoolPropWrapper
         switch (name)
         {
             case "Twb": // Wet Bulb Temperature (°C to K)
-                return value + 273.15;
-            case "Cda": // Specific heat of dry air (kJ/kg/K to J/kg/K)
-                return value * 1000;
-            case "Cha": // Specific heat of humid air (kJ/kg/K to J/kg/K)
-                return value * 1000;
             case "Tdp": // Dew Point Temperature (°C to K)
-                return value + 273.15;
-            case "Hda": // Specific Enthalpy of dry air (kJ/kg to J/kg)
-                return value * 1000;
-            case "Hha": // Specific Enthalpy of humid air (kJ/kg to J/kg)
-                return value * 1000;
-            case "K": // Conductivity (W/m/K to W/m/K) - no conversion needed
-                return value;
-            case "MU": // Viscosity (mPa-s to Pa.s)
-                return value / 1000;
-            case "Psi_w": // Water molar fraction (mol water/mol humid air) - no conversion needed
-                return value;
-            case "P": // Pressure (bar to Pa)
-                return value * 1e5;
-            case "P_w": // Partial pressure of water (bar to Pa)
-                return value * 1e5;
-            case "R": // Relative Humidity (%) to fractional
-                return value;
-            case "Sda": // Specific entropy of dry air (kJ/kg/K to J/kg/K)
-                return value * 1000;
-            case "Sha": // Specific entropy of humid air (kJ/kg/K to J/kg/K)
-                return value * 1000;
             case "T": // Dry Bulb Temperature (°C to K)
                 return value + 273.15;
-            case "Vda": // Specific volume of dry air (m3/kg to m3/kg) - no conversion needed
-                return value;
-            case "Vha": // Specific volume of humid air (m3/kg to m3/kg) - no conversion needed
-                return value;
-            case "W": // Humidity ratio (kg water/kg dry air) - no conversion needed
-                return value;
-            case "Z": // Compressibility factor - no conversion needed
-                return value;
-            case "Dda": // Density of dry air (kg/m3 to kg/m3) - no conversion needed
-                return value;
-            case "Dha": // Density of humid air (kg/m3 to kg/m3) - no conversion needed
-                return value;
+            case "Cda": // Specific heat of dry air (kJ/kg/K to J/kg/K)
+            case "Cha": // Specific heat of humid air (kJ/kg/K to J/kg/K)
+            case "Hda": // Specific Enthalpy of dry air (kJ/kg to J/kg)
+            case "Hha": // Specific Enthalpy of humid air (kJ/kg to J/kg)
+            case "Sda": // Specific entropy of dry air (kJ/kg/K to J/kg/K)
+            case "Sha": // Specific entropy of humid air (kJ/kg/K to J/kg/K)
+                return value * 1000;
+            case "P": // Pressure (bar to Pa)
+            case "P_w": // Partial pressure of water (bar to Pa)
+                return value * 1e5;
             default:
                 return value; // No conversion if unit not found
         }
@@ -377,47 +349,19 @@ public static class CoolPropWrapper
         switch (name)
         {
             case "Twb": // Wet Bulb Temperature (K to °C)
-                return value - 273.15;
-            case "Cda": // Specific heat of dry air (J/kg/K to kJ/kg/K)
-                return value / 1000;
-            case "Cha": // Specific heat of humid air (J/kg/K to kJ/kg/K)
-                return value / 1000;
             case "Tdp": // Dew Point Temperature (K to °C)
-                return value - 273.15;
-            case "Hda": // Specific Enthalpy of dry air (J/kg to kJ/kg)
-                return value / 1000;
-            case "Hha": // Specific Enthalpy of humid air (J/kg to kJ/kg)
-                return value / 1000;
-            case "K": // Conductivity (W/m/K to W/m/K) - no conversion needed
-                return value;
-            case "MU": // Viscosity (Pa.s to mPa.s)
-                return value * 1000;
-            case "Psi_w": // Water molar fraction (mol water/mol humid air) - no conversion needed
-                return value;
-            case "P": // Pressure (Pa to bar)
-                return value / 1e5;
-            case "P_w": // Partial pressure of water (Pa to bar)
-                return value / 1e5;
-            case "R": // Relative Humidity (fractional to %)
-                return value;
-            case "Sda": // Specific entropy of dry air (J/kg/K to kJ/kg/K)
-                return value / 1000;
-            case "Sha": // Specific entropy of humid air (J/kg/K to kJ/kg/K)
-                return value / 1000;
             case "T": // Dry Bulb Temperature (K to °C)
                 return value - 273.15;
-            case "Vda": // Specific volume of dry air (m3/kg to m3/kg) - no conversion needed
-                return value;
-            case "Vha": // Specific volume of humid air (m3/kg to m3/kg) - no conversion needed
-                return value;
-            case "W": // Humidity ratio (kg water/kg dry air) - no conversion needed
-                return value;
-            case "Z": // Compressibility factor - no conversion needed
-                return value;
-            case "Dda": // Density of dry air (kg/m3 to kg/m3) - no conversion needed
-                return value;
-            case "Dha": // Density of humid air (kg/m3 to kg/m3) - no conversion needed
-                return value;
+            case "Cda": // Specific heat of dry air (J/kg/K to kJ/kg/K)
+            case "Cha": // Specific heat of humid air (J/kg/K to kJ/kg/K)
+            case "Hda": // Specific Enthalpy of dry air (J/kg to kJ/kg)
+            case "Hha": // Specific Enthalpy of humid air (J/kg to kJ/kg)
+            case "Sda": // Specific entropy of dry air (J/kg/K to kJ/kg/K)
+            case "Sha": // Specific entropy of humid air (J/kg/K to kJ/kg/K)
+                return value / 1000;
+            case "P": // Pressure (Pa to bar)
+            case "P_w": // Partial pressure of water (Pa to bar)
+                return value / 1e5;
             default:
                 return value; // No conversion if unit not found
         }
