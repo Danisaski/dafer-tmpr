@@ -72,7 +72,7 @@ This will return the humidity ratio (W) for air at **25°C**, **1.01325 bar**, a
 | Enthalpy (humid air)| `Hha`                      | Specific enthalpy (humid air)                    | kJ/kg            | J/kg            |
 | Entropy (dry air)  | `Sda`                      | Specific entropy (dry air base)                   | kJ/kg·K              | J/kg·K              |
 | Entropy (humid air)| `Sha`                      | Specific entropy (humid air)                     | kJ/kg·K            | J/kg·K            |
-| Relative Humidity   | `RH`, `relhum`, `R`        | Relative humidity (humid air)                    | %                  | %                 |
+| Relative Humidity   | `RH`, `relhum`, `R`        | Relative humidity (humid air)                    | p.u.                  | p.u.                 |
 | Humidity Ratio      | `W`, `omega`, `humrat`     | Humidity ratio (humid air)                       | kg_water/kg_dry_air | kg_water/kg_dry_air |
 
 
