@@ -1,4 +1,4 @@
-# CoolPropWrapper for Excel
+# A CoolProp wrapper for Excel
 
 ## Installation
 Move the following files wherever you want, if using [compiled binaries](https://github.com/Danisaski/CoolPropWrapper/tree/main/compiled):
