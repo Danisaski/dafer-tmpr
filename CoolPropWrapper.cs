@@ -8,9 +8,20 @@ public static class CoolPropWrapper
     [DllImport("CoolProp.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern double PropsSI(string output, string name1, double value1, string name2, double value2, string fluid);
 
-    // Import CoolProp.dll
+    // Import HAPropsSI
     [DllImport("CoolProp.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern double HAPropsSI(string output, string name1, double value1, string name2, double value2, string name3, double value3);
+
+    // Import CoolProp's error retrieval function
+    [DllImport("CoolProp.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr get_global_param_string(string param);
+
+    // Function to retrieve the error message from CoolProp
+    private static string GetCoolPropError()
+    {
+        IntPtr ptr = get_global_param_string("errstring");
+        return Marshal.PtrToStringAnsi(ptr) ?? "Unknown error";
+    }
 
     // Function to calculate thermodynamic properties
     [ExcelFunction(Description = "Calculate thermodynamic properties of real fluids using CoolProp with engineering units.")]
@@ -23,67 +34,80 @@ public static class CoolPropWrapper
         if (string.IsNullOrWhiteSpace(name2)) return "Error: Second property name is missing.";
         if (value2 == null || !(value2 is double)) return "Error: Second property value is missing or not a number.";
         if (string.IsNullOrWhiteSpace(fluid)) return "Error: Fluid name is missing.";
-        
+
         // Normalize parameter names
         name1 = FormatName(name1);
         name2 = FormatName(name2);
         output = FormatName(output);
-        
+
         // Convert inputs to SI units
         double val1SI = ConvertToSI(name1, (double)value1);
         double val2SI = ConvertToSI(name2, (double)value2);
-        
+
         // Call CoolProp for the requested property
         double result;
         try
         {
             result = PropsSI(output, name1, val1SI, name2, val2SI, fluid);
+
+            // Check if the result is a large number (potential error)
+            if (double.IsNaN(result) || result >= 1.0E+308 || result <= -1.0E+308)
+            {
+                return $"Error: CoolProp failed to compute property. {GetCoolPropError()}";
+            }
         }
         catch (Exception ex)
         {
-            return $"Error: Failed to compute property. {ex.Message}";
+            return $"Error: Exception occurred while computing property. {ex.Message}";
         }
-        
+
         // Convert output to engineering units
         return ConvertFromSI(output, result);
     }
 
-    [ExcelFunction(Description = "Calculate thermodynamic properties of humid air using CoolProp with engineering units.")]
-    public static object TMPa(string output, string name1, object value1, string name2, object value2, string name3, object value3)
+
+[ExcelFunction(Description = "Calculate thermodynamic properties of humid air using CoolProp with engineering units.")]
+public static object TMPa(string output, string name1, object value1, string name2, object value2, string name3, object value3)
+{
+    // Check for missing or invalid inputs
+    if (string.IsNullOrWhiteSpace(output)) return "Error: Output parameter is missing.";
+    if (string.IsNullOrWhiteSpace(name1)) return "Error: First property name is missing.";
+    if (value1 == null || !(value1 is double)) return "Error: First property value is missing or not a number.";
+    if (string.IsNullOrWhiteSpace(name2)) return "Error: Second property name is missing.";
+    if (value2 == null || !(value2 is double)) return "Error: Second property value is missing or not a number.";
+    if (string.IsNullOrWhiteSpace(name3)) return "Error: Third property name is missing.";
+    if (value3 == null || !(value3 is double)) return "Error: Third property value is missing or not a number.";
+
+    // Normalize parameter names
+    name1 = FormatName_HA(name1);
+    name2 = FormatName_HA(name2);
+    name3 = FormatName_HA(name3);
+    output = FormatName_HA(output);
+
+    // Convert inputs to SI units
+    double val1SI = ConvertToSI_HA(name1, (double)value1);
+    double val2SI = ConvertToSI_HA(name2, (double)value2);
+    double val3SI = ConvertToSI_HA(name3, (double)value3);
+
+    // Call CoolProp for the requested property
+    double result;
+    try
     {
-        // Check for missing or invalid inputs
-        if (string.IsNullOrWhiteSpace(output)) return "Error: Output parameter is missing.";
-        if (string.IsNullOrWhiteSpace(name1)) return "Error: First property name is missing.";
-        if (value1 == null || !(value1 is double)) return "Error: First property value is missing or not a number.";
-        if (string.IsNullOrWhiteSpace(name2)) return "Error: Second property name is missing.";
-        if (value2 == null || !(value2 is double)) return "Error: Second property value is missing or not a number.";
-        if (string.IsNullOrWhiteSpace(name3)) return "Error: Third property name is missing.";
-        if (value3 == null || !(value3 is double)) return "Error: Third property value is missing or not a number.";
-        
-        // Normalize parameter names
-        name1 = FormatName_HA(name1);
-        name2 = FormatName_HA(name2);
-        name3 = FormatName_HA(name3);
-        output = FormatName_HA(output);
-        
-        // Convert inputs to SI units
-        double val1SI = ConvertToSI_HA(name1, (double)value1);
-        double val2SI = ConvertToSI_HA(name2, (double)value2);
-        double val3SI = ConvertToSI_HA(name3, (double)value3);
-        
-        // Call CoolProp for the requested property
-        double result;
-        try
+        result = HAPropsSI(output, name1, val1SI, name2, val2SI, name3, val3SI);
+
+        // Check if the result is a large number (potential error)
+        if (double.IsNaN(result) || result >= 1.0E+308 || result <= -1.0E+308)
         {
-            result = HAPropsSI(output, name1, val1SI, name2, val2SI, name3, val3SI);
+            return $"Error: CoolProp failed to compute property. {GetCoolPropError()}";
         }
-        catch (Exception ex)
-        {
-            return $"Error: Failed to compute property. {ex.Message}";
-        }
-        
-        // Convert output to engineering units
-        return ConvertFromSI_HA(output, result);
+    }
+    catch (Exception ex)
+    {
+        return $"Error: Exception occurred while computing property. {ex.Message}";
+    }
+
+    // Convert output to engineering units
+    return ConvertFromSI_HA(output, result);
     }
 
 
@@ -366,6 +390,6 @@ public static class CoolPropWrapper
                 return value; // No conversion if unit not found
         }
     }
-    
+
 }
 
