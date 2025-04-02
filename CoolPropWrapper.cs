@@ -117,12 +117,15 @@ public static object TMPa(string output, string name1, object value1, string nam
         switch (name.ToLower())
         {
             case "t":
+            case "temp":
             case "temperature":
                 return "T";
             case "p":
+            case "pres":
             case "pressure":
                 return "P";
             case "h":
+            case "enth":
             case "enthalpy":
             case "hmass":
                 return "H";
@@ -131,25 +134,34 @@ public static object TMPa(string output, string name1, object value1, string nam
             case "umass":
                 return "U";
             case "s":
+            case "entr":
             case "entropy":
             case "smass":
                 return "S";
             case "dmolar":
+            case "dmol":
                 return "Dmolar";
             case "delta":
                 return "Delta";
             case "rho":
+            case "dens":
             case "dmass":
                 return "D";
             case "cvmass":
+            case "cv":
                 return "Cvmass";
             case "cpmass":
+            case "cp":
                 return "Cpmass";
             case "cpmolar":
+            case "cpmol":
                 return "Cpmolar";
             case "cvmolar":
+            case "cvmol":
                 return "Cvmolar";
             case "q":
+            case "quality":
+            case "x":
                 return "Q";
             case "tau":
                 return "Tau";
