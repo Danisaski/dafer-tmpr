@@ -7,7 +7,7 @@ Move the following files wherever you want, if using [compiled binaries](https:/
 .\compiled\{dotnet_framework}\CoolPropWrapper.dll
 .\CoolProp.dll
 ```
-[Default release](https://github.com/Danisaski/CoolPropWrapper/releases/tag/alpha) corresponds to net6.0-windows.
+[Default release](https://github.com/Danisaski/CoolPropExcelWrapper/releases) corresponds to net6.0-windows.
 
 Import in Excel the `.xll` file.
 
