@@ -28,6 +28,14 @@ CoolPropWrapper allows you to compute thermodynamic properties of real fluids an
 ```
 This will return the enthalpy (H) of water at **25°C** and **1.01325 bar**.
 
+It can be used in a parametric way for convenience and efficient calculations. This allows for modular approaches, being able to reuse part of the calculations, drag the formulas, etc.
+
+For example using:
+```excel
+=TMPr(E1,B1,B2,C1,C2,A2)
+```
+![Parametric usage](https://github.com/Danisaski/CoolPropExcelWrapper/blob/main/imgs/screenshot.png)
+
 ### `TMPa(output, name1, value1, name2, value2, name3, value3)`
 - Computes thermodynamic properties of humid air.
 - **Units used:**
