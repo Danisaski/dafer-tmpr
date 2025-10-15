@@ -2,13 +2,13 @@
 
 ## Installation
 
-[Latest releases](https://github.com/Danisaski/dafer-tmpr/releases) are available for .NET 6 to .NET 9 targetting windows. If you are not sure which version is installed in your machine, [download](https://github.com/Danisaski/dafer-tmpr/releases/tag/net6-win) the .NET6 version. If you have .NET SDK installed you could check which version to download via:
+[Latest releases](https://github.com/Danisaski/dafer-tmpr/releases) are available for a portable standalone version as well as .NET 6 to .NET 9 targetting windows. If you are **not sure which .NET distribution is installed in your machine**, if any at all, **[download](https://github.com/Danisaski/dafer-tmpr/releases/tag/v0.1.0) the portable rolling release version**. If you have .NET SDK installed you could check which version to download via:
 
 ```bash
 dotnet --list-runtimes
 ```
 
-After downloading the `Coolprop.dll`, `CoolpropWrapper.dll` and `CoolpropWrapper.xll`, place the three files **together** in the directory of your choice. Finally import in Excel the `.xll` file via: File (Archivo) -> Options (Opciones) -> Addins (Complementos) -> Import (Ir...) -> Browse... (Examinar...) and select the `.xll` file.
+After downloading `Coolprop.dll`, `CoolpropWrapper.dll` and `CoolpropWrapper.xll` (and `CoolPropWrapper.dna` for the portable version), place the three (four) files **together** in the directory of your choice. Finally import in Excel the `.xll` file via: File (Archivo) -> Options (Opciones) -> Addins (Complementos) -> Import (Ir...) -> Browse... (Examinar...) and select the `.xll` file.
 
 ## Usage
 CoolPropWrapper allows you to compute thermodynamic properties of real fluids and humid air using CoolProp in Excel. The primary functions available are:
@@ -105,6 +105,7 @@ Move the output files:
 ```
 
 Import in Excel the `.xll` file.
+
 
 
 
