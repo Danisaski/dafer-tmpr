@@ -1,15 +1,14 @@
 # A CoolProp wrapper for Excel
 
 ## Installation
-Move the following files wherever you want, if using [compiled binaries](https://github.com/Danisaski/CoolPropWrapper/tree/main/compiled):
-```bash
-.\compiled\{dotnet_framework}\CoolPropWrapper.xll
-.\compiled\{dotnet_framework}\CoolPropWrapper.dll
-.\CoolProp.dll
-```
-[Latest releases](https://github.com/Danisaski/CoolPropExcelWrapper/releases) are available for .NET 6 to .NET 9 targetting windows.
 
-Import in Excel the `.xll` file.
+[Latest releases](https://github.com/Danisaski/dafer-tmpr/releases) are available for .NET 6 to .NET 9 targetting windows. If you are not sure which version is installed in your machine, [download](https://github.com/Danisaski/dafer-tmpr/releases/tag/net6-win) the .NET6 version. If you have .NET SDK installed you could check which version to download via:
+
+```bash
+dotnet --list-runtimes
+```
+
+After downloading the `Coolprop.dll`, `CoolpropWrapper.dll` and `CoolpropWrapper.xll`, place the three files **together** in the directory of your choice. Finally import in Excel the `.xll` file via: File (Archivo) -> Options (Opciones) -> Addins (Complementos) -> Import (Ir...) -> Browse... (Examinar...) and select the `.xll` file.
 
 ## Usage
 CoolPropWrapper allows you to compute thermodynamic properties of real fluids and humid air using CoolProp in Excel. The primary functions available are:
@@ -34,7 +33,7 @@ For example using:
 ```excel
 =TMPr(E1,B1,B2,C1,C2,A2)
 ```
-![Parametric usage](https://github.com/Danisaski/CoolPropExcelWrapper/blob/main/imgs/screenshot.png)
+![Parametric usage](https://github.com/Danisaski/dafer-tmpr/blob/main/imgs/screenshot.png)
 
 ### `TMPa(output, name1, value1, name2, value2, name3, value3)`
 - Computes thermodynamic properties of humid air.
@@ -106,4 +105,5 @@ Move the output files:
 ```
 
 Import in Excel the `.xll` file.
+
 
