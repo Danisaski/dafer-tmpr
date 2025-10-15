@@ -1,4 +1,4 @@
-# A CoolProp wrapper for Excel
+# A CoolProp wrapper for Excel in engineering units
 
 ## Installation
 
@@ -105,5 +105,6 @@ Move the output files:
 ```
 
 Import in Excel the `.xll` file.
+
 
 
