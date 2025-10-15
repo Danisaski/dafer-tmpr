@@ -1,20 +1,273 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using ExcelDna.Integration;
 
 public static class CoolPropWrapper
 {
-    // Import CoolProp.dll
-    [DllImport("CoolProp.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern double PropsSI(string output, string name1, double value1, string name2, double value2, string fluid);
+    // Windows API for LoadLibrary and SetDllDirectory
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr LoadLibrary(string dllToLoad);
 
-    // Import HAPropsSI
-    [DllImport("CoolProp.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern double HAPropsSI(string output, string name1, double value1, string name2, double value2, string name3, double value3);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
 
-    // Import CoolProp's error retrieval function
-    [DllImport("CoolProp.dll", CallingConvention = CallingConvention.Cdecl)]
-    private static extern IntPtr get_global_param_string(string param);
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool SetDllDirectory(string lpPathName);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool AddDllDirectory(string NewDirectory);
+
+    // Static constructor to load CoolProp.dll
+    static CoolPropWrapper()
+    {
+        LoadCoolPropDll();
+    }
+
+    private static void LoadCoolPropDll()
+    {
+        try
+        {
+            // Multiple approaches to find and load CoolProp.dll
+            string[] searchPaths = {
+                // Excel-DNA specific: XLL directory
+                Path.GetDirectoryName(ExcelDnaUtil.XllPath),
+                // Current assembly location
+                Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                // Current directory
+                Directory.GetCurrentDirectory()
+            };
+
+            foreach (string searchPath in searchPaths)
+            {
+                if (string.IsNullOrEmpty(searchPath)) continue;
+
+                string coolPropPath = Path.Combine(searchPath, "CoolProp.dll");
+                if (File.Exists(coolPropPath))
+                {
+                    // Try to set the DLL directory first
+                    SetDllDirectory(searchPath);
+                    
+                    // Try to load with full path
+                    IntPtr handle = LoadLibrary(coolPropPath);
+                    if (handle != IntPtr.Zero)
+                    {
+                        // Successfully loaded, we're done
+                        return;
+                    }
+                }
+            }
+
+            // Final fallback - let Windows search
+            LoadLibrary("CoolProp.dll");
+        }
+        catch
+        {
+            // If all else fails, let the DllImport handle it during first call
+        }
+    }
+
+    // Diagnostic function to help troubleshoot DLL loading
+    [ExcelFunction(Description = "Diagnostic function to check CoolProp DLL loading paths")]
+    public static object TMPdiag()
+    {
+        try
+        {
+            string[] searchPaths = GetValidSearchPaths();
+
+            string result = "CoolProp.dll search paths:\n";
+            for (int i = 0; i < searchPaths.Length; i++)
+            {
+                try
+                {
+                    string coolPropPath = Path.Combine(searchPaths[i], "CoolProp.dll");
+                    bool exists = File.Exists(coolPropPath);
+                    result += $"{i + 1}. {searchPaths[i]} - {(exists ? "FOUND" : "NOT FOUND")}\n";
+                }
+                catch (Exception pathEx)
+                {
+                    result += $"{i + 1}. {searchPaths[i]} - ERROR: {pathEx.Message}\n";
+                }
+            }
+
+            // Additional debug info
+            result += "\nDebug info:\n";
+            try
+            {
+                result += $"XllPath: {ExcelDnaUtil.XllPath ?? "NULL"}\n";
+            }
+            catch (Exception ex)
+            {
+                result += $"XllPath: ERROR - {ex.Message}\n";
+            }
+
+            try
+            {
+                result += $"Assembly Location: {Assembly.GetExecutingAssembly().Location ?? "NULL"}\n";
+            }
+            catch (Exception ex)
+            {
+                result += $"Assembly Location: ERROR - {ex.Message}\n";
+            }
+
+            try
+            {
+                result += $"Current Directory: {Directory.GetCurrentDirectory() ?? "NULL"}\n";
+            }
+            catch (Exception ex)
+            {
+                result += $"Current Directory: ERROR - {ex.Message}\n";
+            }
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return $"Diagnostic error: {ex.Message}";
+        }
+    }
+
+    // Dynamic loading approach - store the loaded handle
+    private static IntPtr _coolPropHandle = IntPtr.Zero;
+
+    // Delegate types for CoolProp functions
+    private delegate double PropsSI_Delegate(string output, string name1, double value1, string name2, double value2, string fluid);
+    private delegate double HAPropsSI_Delegate(string output, string name1, double value1, string name2, double value2, string name3, double value3);
+    private delegate IntPtr get_global_param_string_Delegate(string param);
+
+    // Static function pointers
+    private static PropsSI_Delegate _PropsSI;
+    private static HAPropsSI_Delegate _HAPropsSI;
+    private static get_global_param_string_Delegate _get_global_param_string;
+
+    // Wrapper functions that use dynamic loading
+    public static double PropsSI(string output, string name1, double value1, string name2, double value2, string fluid)
+    {
+        EnsureCoolPropLoaded();
+        return _PropsSI(output, name1, value1, name2, value2, fluid);
+    }
+
+    public static double HAPropsSI(string output, string name1, double value1, string name2, double value2, string name3, double value3)
+    {
+        EnsureCoolPropLoaded();
+        return _HAPropsSI(output, name1, value1, name2, value2, name3, value3);
+    }
+
+    private static IntPtr get_global_param_string(string param)
+    {
+        EnsureCoolPropLoaded();
+        return _get_global_param_string(param);
+    }
+
+    private static void EnsureCoolPropLoaded()
+    {
+        if (_coolPropHandle != IntPtr.Zero && _PropsSI != null) return;
+
+        // Find and load CoolProp.dll with safe path handling
+        string[] searchPaths = GetValidSearchPaths();
+
+        foreach (string searchPath in searchPaths)
+        {
+            if (string.IsNullOrEmpty(searchPath)) continue;
+
+            try
+            {
+                string coolPropPath = Path.Combine(searchPath, "CoolProp.dll");
+                if (File.Exists(coolPropPath))
+                {
+                    _coolPropHandle = LoadLibrary(coolPropPath);
+                    if (_coolPropHandle != IntPtr.Zero)
+                    {
+                        LoadFunctionPointers();
+                        return;
+                    }
+                }
+            }
+            catch (ArgumentException)
+            {
+                // Invalid path format, skip this path
+                continue;
+            }
+            catch (PathTooLongException)
+            {
+                // Path too long, skip this path
+                continue;
+            }
+        }
+
+        // Final attempt with system search
+        _coolPropHandle = LoadLibrary("CoolProp.dll");
+        if (_coolPropHandle != IntPtr.Zero)
+        {
+            LoadFunctionPointers();
+            return;
+        }
+
+        throw new DllNotFoundException($"CoolProp.dll could not be loaded from any valid search path. Paths tried: {string.Join("; ", searchPaths)}");
+    }
+
+    private static string[] GetValidSearchPaths()
+    {
+        var validPaths = new List<string>();
+
+        // Try Excel-DNA specific path
+        try
+        {
+            string xllPath = ExcelDnaUtil.XllPath;
+            if (!string.IsNullOrEmpty(xllPath))
+            {
+                string xllDir = Path.GetDirectoryName(xllPath);
+                if (!string.IsNullOrEmpty(xllDir) && Directory.Exists(xllDir))
+                    validPaths.Add(xllDir);
+            }
+        }
+        catch { /* Ignore errors getting XLL path */ }
+
+        // Try assembly location
+        try
+        {
+            string assemblyPath = Assembly.GetExecutingAssembly().Location;
+            if (!string.IsNullOrEmpty(assemblyPath))
+            {
+                string assemblyDir = Path.GetDirectoryName(assemblyPath);
+                if (!string.IsNullOrEmpty(assemblyDir) && Directory.Exists(assemblyDir))
+                    validPaths.Add(assemblyDir);
+            }
+        }
+        catch { /* Ignore errors getting assembly location */ }
+
+        // Try current directory
+        try
+        {
+            string currentDir = Directory.GetCurrentDirectory();
+            if (!string.IsNullOrEmpty(currentDir) && Directory.Exists(currentDir))
+                validPaths.Add(currentDir);
+        }
+        catch { /* Ignore errors getting current directory */ }
+
+        return validPaths.ToArray();
+    }
+
+    private static void LoadFunctionPointers()
+    {
+        IntPtr propsSIPtr = GetProcAddress(_coolPropHandle, "PropsSI");
+        IntPtr haPropsSIPtr = GetProcAddress(_coolPropHandle, "HAPropsSI");
+        IntPtr getErrorPtr = GetProcAddress(_coolPropHandle, "get_global_param_string");
+
+        if (propsSIPtr != IntPtr.Zero)
+            _PropsSI = Marshal.GetDelegateForFunctionPointer<PropsSI_Delegate>(propsSIPtr);
+        if (haPropsSIPtr != IntPtr.Zero)
+            _HAPropsSI = Marshal.GetDelegateForFunctionPointer<HAPropsSI_Delegate>(haPropsSIPtr);
+        if (getErrorPtr != IntPtr.Zero)
+            _get_global_param_string = Marshal.GetDelegateForFunctionPointer<get_global_param_string_Delegate>(getErrorPtr);
+
+        if (_PropsSI == null || _HAPropsSI == null || _get_global_param_string == null)
+        {
+            throw new EntryPointNotFoundException("Required functions not found in CoolProp.dll");
+        }
+    }
 
     // Function to retrieve the error message from CoolProp
     private static string GetCoolPropError()
@@ -55,6 +308,14 @@ public static class CoolPropWrapper
             {
                 return $"Error: CoolProp failed to compute property. {GetCoolPropError()}";
             }
+        }
+        catch (DllNotFoundException ex)
+        {
+            return $"Error: CoolProp.dll not found in any search path. Use TMPdiag() function to see paths checked. {ex.Message}";
+        }
+        catch (EntryPointNotFoundException ex)
+        {
+            return $"Error: Required functions not found in CoolProp.dll. Check DLL version and architecture match. {ex.Message}";
         }
         catch (Exception ex)
         {
@@ -100,6 +361,14 @@ public static object TMPa(string output, string name1, object value1, string nam
         {
             return $"Error: CoolProp failed to compute property. {GetCoolPropError()}";
         }
+    }
+    catch (DllNotFoundException ex)
+    {
+        return $"Error: CoolProp.dll not found in any search path. Use TMPdiag() function to see paths checked. {ex.Message}";
+    }
+    catch (EntryPointNotFoundException ex)
+    {
+        return $"Error: Required functions not found in CoolProp.dll. Check DLL version and architecture match. {ex.Message}";
     }
     catch (Exception ex)
     {
